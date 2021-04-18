@@ -1,0 +1,71 @@
+version: '3.9'
+services:
+  async:
+    stdin_open: true
+    tty: true
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: project_async
+    command: 'bundle exec sidekiq'
+    volumes:
+      - .:/app:cached
+    depends_on:
+      - kv
+      - db
+    env_file:
+      - .env
+  app:
+    stdin_open: true
+    tty: true
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    command: 'bundle exec rails s --binding=0.0.0.0 --environment=${RAILS_ENV} --port=${PORT}'
+    container_name: project_app
+    depends_on:
+      - db
+      - async
+    env_file:
+      - .env
+    volumes:
+      - .:/app:cached
+      - project_bundle:/usr/local/bundle
+      - project_log:/app/log
+      - project_node_modules:/app/node_modules
+      - project_packs:/app/public/packs
+      - project_rails_cache:/app/tmp/cache
+      - project_tmp:/app/tmp
+    ports:
+      - '${EXPOSE_PORT_APP}:${PORT}'
+  db:
+    image: mysql:latest
+    command: [--default-authentication-plugin=mysql_native_password]
+    container_name: project_db
+    env_file:
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_HOST: '%'
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: project_development
+    volumes:
+      - project_db:/var/lib/mysql
+      - ${PROJECT_ROOT}/docker/mysql:/docker-entrypoint-initdb.d:ro
+  kv:
+    image: redis:latest
+    container_name: project_kv
+    env_file:
+      - .env
+    volumes:
+      - project_kv:/data
+volumes:
+  project_bundle:
+  project_db: 
+  project_kv:
+  project_log:
+  project_node_modules:
+  project_packs:
+  project_rails_cache:
+  project_tmp:

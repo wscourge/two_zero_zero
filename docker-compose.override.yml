@@ -1,0 +1,32 @@
+version: '3.9'
+services:
+  db:
+    ports:
+      - '${EXPOSE_PORT_DB}:${DB_PORT}'
+  kv:
+    ports:
+      - '${EXPOSE_PORT_KV}:${REDIS_PORT}'
+  mailcatcher:
+    image: zolweb/docker-mailcatcher:latest
+    container_name: ${DOCKER_MAIL_HOST}
+    ports:
+      - '${EXPOSE_PORT_MAIL_UI}:${DOCKER_PORT_MAIL_UI}'
+      - '${EXPOSE_PORT_MAIL_SMTP}:${DOCKER_PORT_MAIL_SMTP}'
+  webpacker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    command: './bin/webpack-dev-server'
+    container_name: ${WEBPACKER_DEV_SERVER_HOST}
+    env_file:
+      - .env
+    environment:
+      # makes webpack-dev-server accessible from the outside (default: localhost)
+      WEBPACKER_DEV_SERVER_HOST: 0.0.0.0
+    volumes:
+      - .:/app:cached
+      - project_bundle:/usr/local/bundle
+      - project_node_modules:/app/node_modules
+      - project_packs:/app/public/packs
+    ports:
+      - '${EXPOSE_PORT_WEBPACKER}:${DOCKER_PORT_WEBPACKER}'
